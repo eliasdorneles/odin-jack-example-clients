@@ -40,14 +40,12 @@ process :: proc "c" (nframes: jack.NFrames, data: rawptr) -> i32 {
 }
 
 main :: proc() {
-	fmt.printfln("JACK version: %s", jack.get_version_string())
-
 	// Fill the table with sine values
 	for i in 0 ..< len(sine_table) {
 		sine_table[i] = math.sin_f32(f32(i) / f32(TABLE_SIZE) * 2 * math.PI)
 	}
 
-	client, status := jack.client_open("simple_client")
+	client, status := jack.client_open("sine_client")
 	if client == nil {
 		fmt.printfln("Failed to open client, status=%s", status)
 		os.exit(1)
@@ -61,8 +59,8 @@ main :: proc() {
 	jack.set_process_callback(client, process, nil)
 
 	// register two output ports
-	output_port1 = jack.audio_port_register(client, "output1", {jack.PortFlag.IsOutput}, 0)
-	output_port2 = jack.audio_port_register(client, "output2", {jack.PortFlags.IsOutput}, 0)
+	output_port1 = jack.audio_port_register(client, "output1", {.IsOutput}, 0)
+	output_port2 = jack.audio_port_register(client, "output2", {.IsOutput}, 0)
 
 	if (output_port1 == nil || output_port2 == nil) {
 		fmt.println("Failed to create ports")
@@ -79,22 +77,12 @@ main :: proc() {
 	// connect the ports -- cannot be done before the client is activated
 	// note: we connect this program output ports to jack's physical input ports
 	{
-		input_ports := jack.get_ports(
-			client,
-			nil,
-			nil,
-			{jack.PortFlag.IsInput, jack.PortFlag.IsPhysical},
-		)
+		input_ports := jack.get_ports(client, nil, nil, {.IsInput, .IsPhysical})
 		defer delete(input_ports)
 
 		if len(input_ports) == 0 {
 			fmt.println("There are no physical ports available, exiting...")
 			os.exit(1)
-		}
-		fmt.printfln("There are %d ports", len(input_ports))
-
-		for p, i in input_ports {
-			fmt.println("port:", i, p)
 		}
 
 		if (jack.connect(client, jack.port_name(output_port1), input_ports[0]) != 0) {
@@ -105,7 +93,6 @@ main :: proc() {
 		}
 	}
 
-	fmt.println("Client opened with name:", jack.get_client_name(client))
 	fmt.println("Hit Ctrl-C to quit...")
 	for do time.sleep(time.Second)
 }
