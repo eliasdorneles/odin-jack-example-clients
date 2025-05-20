@@ -1,4 +1,4 @@
-package jack_sample_clients
+package jack_simple_client
 
 import "core:c"
 import "core:c/libc"
@@ -45,7 +45,7 @@ main :: proc() {
 		sine_table[i] = math.sin_f32(f32(i) / f32(TABLE_SIZE) * 2 * math.PI)
 	}
 
-	client, status := jack.client_open("sine_client")
+	client, status := jack.client_open("simple_client")
 	if client == nil {
 		fmt.printfln("Failed to open client, status=%s", status)
 		os.exit(1)

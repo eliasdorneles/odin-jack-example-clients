@@ -57,11 +57,21 @@ JackPort :: struct {
 	// opaque type -- same as jack_port_t in the C API
 }
 
+// Jack MIDI Event (from midiport.h)
+MidiData :: u8
+MidiEvent :: struct {
+	time:   NFrames, /**< Sample index at which event is valid */
+	size:   c.size_t, /**< Number of bytes of data in \a buffer */
+	buffer: [^]MidiData, /**< Raw MIDI data */
+}
+
 // Basic type aliases
 NFrames :: u32 // jack_nframes_t in the C API
 
 // Callback prototypes
 JackProcessCallback :: proc "c" (_: NFrames, _: rawptr) -> i32
+JackSampleRateCallback :: proc "c" (_: NFrames, _: rawptr) -> i32
+JackBufferSizeCallback :: proc "c" (_: NFrames, _: rawptr) -> i32
 
 // Here we expose the C API functions that are good-enough to expose as-is
 // Reference docs: https://jackaudio.org/api/jack_8h.html
@@ -70,8 +80,10 @@ foreign lib {
 	get_version_string :: proc() -> cstring ---
 	client_close :: proc(client: ^JackClient) -> i32 ---
 	get_client_name :: proc(client: ^JackClient) -> cstring ---
+	get_sample_rate :: proc() -> NFrames ---
 
 	set_process_callback :: proc(client: ^JackClient, process_callback: JackProcessCallback, arg: rawptr) -> i32 ---
+	set_sample_rate_callback :: proc(client: ^JackClient, srate_callback: JackSampleRateCallback, arg: rawptr) -> i32 ---
 
 	port_unregister :: proc(client: ^JackClient, port: ^JackPort) -> i32 ---
 
@@ -82,6 +94,9 @@ foreign lib {
 	port_name :: proc(port: ^JackPort) -> cstring ---
 
 	port_get_buffer :: proc(port: ^JackPort, nframes: NFrames) -> rawptr ---
+
+	// from midiport.h
+	midi_get_event_count :: proc(port_buffer: rawptr) -> u32 ---
 }
 
 
@@ -98,6 +113,9 @@ foreign lib {
 
 	@(private = "file")
 	jack_get_ports :: proc(client: ^JackClient, port_name_pattern: cstring, type_name_pattern: cstring, flags: c.ulong) -> [^]cstring ---
+
+	@(private = "file")
+	jack_midi_event_get :: proc(event: ^MidiEvent, port_buffer: rawptr, event_index: u32) -> i32 ---
 
 	/*
      * This function is to be used on memory returned by
@@ -192,4 +210,12 @@ get_ports :: proc(
 	defer jack_free(jack_result)
 
 	return _build_cstring_dynamic_array_from_multipointer(jack_result)
+}
+
+midi_event_get :: proc "c" (port_buffer: rawptr, event_index: u32) -> (MidiEvent, bool) {
+	event: MidiEvent
+	if (jack_midi_event_get(&event, port_buffer, event_index) == 0) {
+		return event, true
+	}
+	return event, false
 }
