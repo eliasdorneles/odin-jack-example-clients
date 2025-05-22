@@ -1,3 +1,6 @@
 midisine
 simple_client
+capture_client
+sndfile_example
 *.o
+/*.wav

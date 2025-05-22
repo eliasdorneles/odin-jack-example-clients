@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-PROGRAMS := simple_client midisine
+PROGRAMS := simple_client midisine capture_client sndfile_example
 
 %: %.odin
 	odin build $< -file
