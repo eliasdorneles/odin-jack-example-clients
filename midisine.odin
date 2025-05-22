@@ -1,7 +1,7 @@
 package jack_midisine
 
+import "base:runtime"
 import "core:c"
-import "core:c/libc"
 import "core:fmt"
 import "core:math"
 import "core:os"
@@ -28,11 +28,13 @@ process :: proc "c" (nframes: jack.NFrames, data: rawptr) -> i32 {
 	out := (cast([^]f32)jack.port_get_buffer(audio_output_port, nframes))[0:nframes]
 	volume :: 0.2
 
+    context = runtime.default_context()
+
 	port_buf := jack.port_get_buffer(midi_input_port, nframes)
 
 	event_count := jack.midi_get_event_count(port_buf)
 	if (event_count > 0) {
-		libc.printf("event_count = %d\n", event_count)
+		fmt.println("event_count = ", event_count)
 	}
 
 	event_index: u32 = 0
@@ -53,7 +55,7 @@ process :: proc "c" (nframes: jack.NFrames, data: rawptr) -> i32 {
 				note = event_data[1]
 				note_on = 0.0
 			}
-			libc.printf("    note %d %s\n", note, ("on" if (note_on > 0) else "off"))
+			fmt.printf("    note %d %s\n", note, ("on" if (note_on > 0) else "off"))
 			event_index += 1
 			if (event_index < event_count) {
 				// load the next event
