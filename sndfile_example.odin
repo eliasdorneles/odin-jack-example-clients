@@ -17,9 +17,9 @@ main :: proc() {
 
 	// Global params
 	volume: f32 = 0.3
-	samplerate: i32 = 44100
-	nchannels: i32 = 2
-	duration: i32 = 3 // seconds
+	samplerate: u32 = 44100
+	nchannels: u32 = 2
+	duration: u32 = 3 // seconds
 	outfile: cstring = "out_sndfile_test.wav"
 
 

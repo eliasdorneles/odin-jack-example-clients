@@ -8,7 +8,6 @@ import "core:os"
 import "core:time"
 import "jack"
 
-
 output_port1: ^jack.JackPort
 output_port2: ^jack.JackPort
 

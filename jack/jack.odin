@@ -65,6 +65,20 @@ MidiEvent :: struct {
 	buffer: [^]MidiData, /**< Raw MIDI data */
 }
 
+RingBufferData :: struct {
+	buf: [^]u8,
+	len: i32,
+}
+
+RingBuffer :: struct {
+	buf:       [^]u8,
+	write_ptr: i32, // in the original, this is a volatile size_t
+	read_ptr:  i32, // in the original, this is a volatile size_t
+	size:      i32,
+	size_mask: i32,
+	mlocked:   int,
+}
+
 // Basic type aliases
 NFrames :: u32 // jack_nframes_t in the C API
 
@@ -72,6 +86,7 @@ NFrames :: u32 // jack_nframes_t in the C API
 JackProcessCallback :: proc "c" (_: NFrames, _: rawptr) -> i32
 JackSampleRateCallback :: proc "c" (_: NFrames, _: rawptr) -> i32
 JackBufferSizeCallback :: proc "c" (_: NFrames, _: rawptr) -> i32
+JackShutdownCallback :: proc "c" (_: rawptr)
 
 // Here we expose the C API functions that are good-enough to expose as-is
 // Reference docs: https://jackaudio.org/api/jack_8h.html
@@ -80,16 +95,16 @@ foreign lib {
 	get_version_string :: proc() -> cstring ---
 	client_close :: proc(client: ^JackClient) -> i32 ---
 	get_client_name :: proc(client: ^JackClient) -> cstring ---
-	get_sample_rate :: proc() -> NFrames ---
+	get_sample_rate :: proc(client: ^JackClient) -> NFrames ---
 
 	set_process_callback :: proc(client: ^JackClient, process_callback: JackProcessCallback, arg: rawptr) -> i32 ---
 	set_sample_rate_callback :: proc(client: ^JackClient, srate_callback: JackSampleRateCallback, arg: rawptr) -> i32 ---
+	on_shutdown :: proc(client: ^JackClient, shutdown_callback: JackShutdownCallback, arg: rawptr) ---
 
 	port_unregister :: proc(client: ^JackClient, port: ^JackPort) -> i32 ---
 
 	activate :: proc(client: ^JackClient) -> i32 ---
 	deactivate :: proc(client: ^JackClient) -> i32 ---
-
 	connect :: proc(client: ^JackClient, source_port: cstring, destination_port: cstring) -> i32 ---
 	port_name :: proc(port: ^JackPort) -> cstring ---
 
@@ -97,6 +112,14 @@ foreign lib {
 
 	// from midiport.h
 	midi_get_event_count :: proc(port_buffer: rawptr) -> u32 ---
+
+	// from ringbuffer.h
+	ringbuffer_create :: proc(sz: u32) -> ^RingBuffer ---
+	ringbuffer_free :: proc(rb: ^RingBuffer) ---
+	ringbuffer_read :: proc(rb: ^RingBuffer, dest: [^]u8, cnt: u32) -> u32 ---
+	ringbuffer_read_space :: proc(rb: ^RingBuffer) -> u32 ---
+	ringbuffer_peek :: proc(rb: ^RingBuffer, dest: [^]u8, cnt: u32) -> u32 ---
+	ringbuffer_write :: proc(rb: ^RingBuffer, src: [^]u8, cnt: u32) -> u32 ---
 }
 
 
