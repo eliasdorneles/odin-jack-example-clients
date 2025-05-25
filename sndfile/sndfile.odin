@@ -96,84 +96,84 @@ FORMAT_ENDMASK :: 0x30000000
 sf_count_t :: i64
 
 SF_INFO :: struct {
-	frames:     sf_count_t,
-	samplerate: u32,
-	channels:   u32,
-	format:     u32,
-	sections:   u32,
-	seekable:   u32,
+    frames:     sf_count_t,
+    samplerate: u32,
+    channels:   u32,
+    format:     u32,
+    sections:   u32,
+    seekable:   u32,
 }
 
 SF_FORMAT_INFO :: struct {
-	format:    i32,
-	name:      cstring,
-	extension: cstring,
+    format:    i32,
+    name:      cstring,
+    extension: cstring,
 }
 
 SNDFILE :: struct {
 }
 
 Mode :: enum {
-	READ  = 0x10,
-	WRITE = 0x20,
-	RDWR  = 0x30,
+    READ  = 0x10,
+    WRITE = 0x20,
+    RDWR  = 0x30,
 }
 
 @(default_calling_convention = "c", link_prefix = "sf_")
 foreign lib {
-	open :: proc(path: cstring, mode: Mode, sfinfo: ^SF_INFO) -> ^SNDFILE ---
-	close :: proc(sndfile: ^SNDFILE) -> i32 ---
+    open :: proc(path: cstring, mode: Mode, sfinfo: ^SF_INFO) -> ^SNDFILE ---
+    close :: proc(sndfile: ^SNDFILE) -> i32 ---
 
-	error :: proc(sndfile: ^SNDFILE) -> i32 ---
-	error_number :: proc(errnum: i32) -> cstring ---
-	strerror :: proc(sndfile: ^SNDFILE) -> cstring ---
+    error :: proc(sndfile: ^SNDFILE) -> i32 ---
+    error_number :: proc(errnum: i32) -> cstring ---
+    strerror :: proc(sndfile: ^SNDFILE) -> cstring ---
 
-	// Functions for reading and writing the data chunk in terms of frames.
-	readf_short :: proc(sndfile: ^SNDFILE, ptr: ^i16, frames: sf_count_t) -> sf_count_t ---
-	writef_short :: proc(sndfile: ^SNDFILE, ptr: ^i16, frames: sf_count_t) -> sf_count_t ---
-	readf_int :: proc(sndfile: ^SNDFILE, ptr: ^i32, frames: sf_count_t) -> sf_count_t ---
-	writef_int :: proc(sndfile: ^SNDFILE, ptr: ^i32, frames: sf_count_t) -> sf_count_t ---
-	readf_float :: proc(sndfile: ^SNDFILE, ptr: ^f32, frames: sf_count_t) -> sf_count_t ---
-	writef_float :: proc(sndfile: ^SNDFILE, ptr: ^f32, frames: sf_count_t) -> sf_count_t ---
-	readf_double :: proc(sndfile: ^SNDFILE, ptr: ^f64, frames: sf_count_t) -> sf_count_t ---
-	writef_double :: proc(sndfile: ^SNDFILE, ptr: ^f64, frames: sf_count_t) -> sf_count_t ---
+    // Functions for reading and writing the data chunk in terms of frames.
+    readf_short :: proc(sndfile: ^SNDFILE, ptr: ^i16, frames: sf_count_t) -> sf_count_t ---
+    writef_short :: proc(sndfile: ^SNDFILE, ptr: ^i16, frames: sf_count_t) -> sf_count_t ---
+    readf_int :: proc(sndfile: ^SNDFILE, ptr: ^i32, frames: sf_count_t) -> sf_count_t ---
+    writef_int :: proc(sndfile: ^SNDFILE, ptr: ^i32, frames: sf_count_t) -> sf_count_t ---
+    readf_float :: proc(sndfile: ^SNDFILE, ptr: ^f32, frames: sf_count_t) -> sf_count_t ---
+    writef_float :: proc(sndfile: ^SNDFILE, ptr: ^f32, frames: sf_count_t) -> sf_count_t ---
+    readf_double :: proc(sndfile: ^SNDFILE, ptr: ^f64, frames: sf_count_t) -> sf_count_t ---
+    writef_double :: proc(sndfile: ^SNDFILE, ptr: ^f64, frames: sf_count_t) -> sf_count_t ---
 
-	// Functions for reading and writing the data chunk in terms of items.
-	read_short :: proc(sndfile: ^SNDFILE, ptr: ^i16, items: sf_count_t) -> sf_count_t ---
-	write_short :: proc(sndfile: ^SNDFILE, ptr: ^i16, items: sf_count_t) -> sf_count_t ---
-	read_int :: proc(sndfile: ^SNDFILE, ptr: ^i32, items: sf_count_t) -> sf_count_t ---
-	write_int :: proc(sndfile: ^SNDFILE, ptr: ^i32, items: sf_count_t) -> sf_count_t ---
-	read_float :: proc(sndfile: ^SNDFILE, ptr: ^f32, items: sf_count_t) -> sf_count_t ---
-	write_float :: proc(sndfile: ^SNDFILE, ptr: ^f32, items: sf_count_t) -> sf_count_t ---
-	read_double :: proc(sndfile: ^SNDFILE, ptr: ^f64, items: sf_count_t) -> sf_count_t ---
-	write_double :: proc(sndfile: ^SNDFILE, ptr: ^f64, items: sf_count_t) -> sf_count_t ---
+    // Functions for reading and writing the data chunk in terms of items.
+    read_short :: proc(sndfile: ^SNDFILE, ptr: ^i16, items: sf_count_t) -> sf_count_t ---
+    write_short :: proc(sndfile: ^SNDFILE, ptr: ^i16, items: sf_count_t) -> sf_count_t ---
+    read_int :: proc(sndfile: ^SNDFILE, ptr: ^i32, items: sf_count_t) -> sf_count_t ---
+    write_int :: proc(sndfile: ^SNDFILE, ptr: ^i32, items: sf_count_t) -> sf_count_t ---
+    read_float :: proc(sndfile: ^SNDFILE, ptr: ^f32, items: sf_count_t) -> sf_count_t ---
+    write_float :: proc(sndfile: ^SNDFILE, ptr: ^f32, items: sf_count_t) -> sf_count_t ---
+    read_double :: proc(sndfile: ^SNDFILE, ptr: ^f64, items: sf_count_t) -> sf_count_t ---
+    write_double :: proc(sndfile: ^SNDFILE, ptr: ^f64, items: sf_count_t) -> sf_count_t ---
 
-	write_sync :: proc(sndfile: ^SNDFILE) ---
+    write_sync :: proc(sndfile: ^SNDFILE) ---
 
-	format_check :: proc(info: ^SF_INFO) -> i32 ---
+    format_check :: proc(info: ^SF_INFO) -> i32 ---
 }
 
 readf :: proc {
-	readf_short,
-	readf_int,
-	readf_float,
-	readf_double,
+    readf_short,
+    readf_int,
+    readf_float,
+    readf_double,
 }
 writef :: proc {
-	writef_short,
-	writef_int,
-	writef_float,
-	writef_double,
+    writef_short,
+    writef_int,
+    writef_float,
+    writef_double,
 }
 read :: proc {
-	read_short,
-	read_int,
-	read_float,
-	read_double,
+    read_short,
+    read_int,
+    read_float,
+    read_double,
 }
 write :: proc {
-	write_short,
-	write_int,
-	write_float,
-	write_double,
+    write_short,
+    write_int,
+    write_float,
+    write_double,
 }
