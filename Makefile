@@ -16,6 +16,7 @@ help:
 	@echo
 	@printf $(HELP_FORMAT) simple_client "Simple client that generates a sine wave"
 	@printf $(HELP_FORMAT) midisine "Client that handles MIDI input and generates a sine wave"
+	@printf $(HELP_FORMAT) capture_client "Client that records from sound device and saves to a WAVE file"
 	@echo
 	@echo Type make followed by the program name to build it
 	@echo

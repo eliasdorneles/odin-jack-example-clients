@@ -187,12 +187,37 @@ main :: proc() {
         buf_size    = 16384, // ring buffer size
         output_path = "wave_out.wav",
         duration    = 3,
-        ports       = {
-            // XXX: in the final program, these should be either provided by the user,
-            // or detected automatically via jack.get_ports(..., {.IsPhysical, .IsInput}})
-            "Built-in Audio Analog Stereo:capture_FL",
-            "Built-in Audio Analog Stereo:capture_FR",
-        },
+        ports       = {}, // Will be populated with physical ports
+    }
+
+    fmt.println("CLI args:", args)
+
+    client, status := jack.client_open("simple_client")
+    if client == nil {
+        fmt.eprintfln("Failed to open client, status=%s", status)
+        os.exit(1)
+    }
+
+    // Here we get first two physical output ports, to record from them
+    source_ports := jack.get_ports(client, nil, nil, {.IsOutput, .IsPhysical})
+    defer delete(source_ports)
+
+    if len(source_ports) == 0 {
+        fmt.eprintln("No physical output ports found")
+        jack.client_close(client)
+        os.exit(1)
+    }
+
+    // Use first one or two physical outputs, if available
+    num_ports := min(len(source_ports), 2)
+    args.ports = make([]string, num_ports)
+    for i in 0..<num_ports {
+        args.ports[i] = strings.clone_from_cstring(source_ports[i])
+    }
+
+    fmt.println("Will record from:")
+    for port, i in args.ports {
+        fmt.printf("  %d: %s\n", i, port)
     }
 
     nports = u32(len(args.ports))
@@ -201,13 +226,6 @@ main :: proc() {
         channels = u32(len(args.ports)),
         duration = args.duration,
         path     = strings.clone_to_cstring(args.output_path),
-    }
-    fmt.println("CLI args:", args)
-
-    client, status := jack.client_open("simple_client")
-    if client == nil {
-        fmt.eprintfln("Failed to open client, status=%s", status)
-        os.exit(1)
     }
     thread_info.client = client
 
