@@ -56,6 +56,8 @@ MIDI-triggered sine wave synthesizer. Connect a MIDI controller to hear notes.
 ./midisine
 ```
 
+**Note:** This Odin version includes a full ADSR envelope (Attack, Decay, Sustain, Release) with smooth legato transitions, unlike the original C version which has no envelope.
+
 ### `capture_client`
 Records audio from your microphone/line input to a WAV file.
 ```bash
