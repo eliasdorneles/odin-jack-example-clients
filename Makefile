@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-PROGRAMS := simple_client midisine capture_client sndfile_example midiseq
+PROGRAMS := simple_client midisine capture_client sndfile_example midiseq metro
 
 all: $(PROGRAMS)
 
@@ -20,6 +20,7 @@ help:
 	@printf $(HELP_FORMAT) midisine "Client that handles MIDI input and generates a sine wave"
 	@printf $(HELP_FORMAT) capture_client "Client that records from sound device and saves to a WAVE file"
 	@printf $(HELP_FORMAT) midiseq "MIDI sequencer that loops a sequence of notes"
+	@printf $(HELP_FORMAT) metro "Audio metronome with configurable BPM and tone"
 	@echo
 	@printf $(HELP_FORMAT) all "Build all programs"
 	@echo Type make followed by the program name to build it

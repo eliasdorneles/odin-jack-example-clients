@@ -76,18 +76,30 @@ A MIDI sequencer that loops a programmed sequence of notes.
 - `note_off_time`: When to stop the note (in samples)
 
 **To hear sound:** `midiseq` outputs MIDI events, not audio. Connect it to a
-synthesizer using `qjackctl` or `qpwgraph` (PipeWire only). You can use
+synthesizer using `qjackctl` or some other connection tool. You can use
 `./midisine` as the synthesizer - just connect `midiseq:midi_out` to
 `midisine:midi_in`.
 
 Press Ctrl+C to stop (all notes will be turned off cleanly).
 
-## Connecting Audio
+### `metro`
+An audio metronome with configurable timing and tone characteristics.
+```bash
+# Simple 120 BPM metronome
+./metro -b 120
 
-After starting a program, use a JACK connection tool to route audio:
+# Custom metronome: 100 BPM, 440Hz tone, 200ms duration
+./metro -b 100 -f 440 -D 200 -A 0.8
+```
 
-- **GUI:** `qjackctl`, `Helvum`, or `Carla`
-- **Command line:** `jack_connect simple_client:output_1 system:playback_1`
+**Options:**
+- `-b, --bpm BPM`: Beats per minute (required)
+- `-f, --frequency FREQ`: Tone frequency in Hz (default: 880)
+- `-A, --amplitude AMP`: Amplitude 0-1 (default: 0.5)
+- `-D, --duration MS`: Tone duration in milliseconds (default: 100)
+- `-a, --attack PERCENT`: Attack time as percentage (default: 1.0)
+- `-d, --decay PERCENT`: Decay time as percentage (default: 10.0)
+
 
 ## Getting Help
 

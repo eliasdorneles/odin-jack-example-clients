@@ -1,8 +1,9 @@
-midisine
-midiseq
-simple_client
-capture_client
-sndfile_example
+/midisine
+/midiseq
+/simple_client
+/capture_client
+/sndfile_example
+/metro
 .claude
 *.o
 /*.wav

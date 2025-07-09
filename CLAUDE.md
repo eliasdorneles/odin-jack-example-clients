@@ -81,7 +81,9 @@ When working with audio clients:
 2. **Port Connection**: Connect client ports to physical ports using
    `jack.connect(client, source_port, destination_port)`
 3. **Real-time Processing**: Implement `process` callback with `"c"` calling
-   convention for real-time audio processing
+   convention for real-time audio processing.
+   Since it's real-time code, **NEVER** call printf or similar IO
+   functions there, unless for debugging purposes: it should never block.
 4. **Error Handling**: Check return values from JACK functions and handle
    client shutdown gracefully
 
