@@ -24,6 +24,58 @@ ramp: f32 = 0.0
 note_on: f32 = 0.0
 note: u8 = 0
 
+// ADSR Envelope parameters (hardcoded for now)
+ATTACK_TIME :: 0.02 // 20ms attack
+DECAY_TIME :: 0.1 // 100ms decay
+SUSTAIN_LEVEL :: 1.0 // sustain at full volume (no decay until note off)
+RELEASE_TIME :: 0.2 // 200ms release
+
+// Envelope phases
+EnvelopePhase :: enum {
+    OFF,
+    ATTACK,
+    DECAY,
+    SUSTAIN,
+    RELEASE,
+}
+
+// Envelope state
+envelope_phase: EnvelopePhase = .OFF
+envelope_frames: u32 = 0 // frames since current phase started
+attack_frames: u32 = 0 // precomputed attack duration in frames
+decay_frames: u32 = 0 // precomputed decay duration in frames
+release_frames: u32 = 0 // precomputed release duration in frames
+sample_rate: u32 = 44100 // will be set by callback
+
+/*
+ * MIDI Sine Wave Process Callback with ADSR Envelope
+ * 
+ * This generates a sine wave from MIDI note events with a full ADSR envelope.
+ * The envelope has four phases:
+ * 1. Attack: linear ramp from 0 to 1 over ATTACK_TIME
+ * 2. Decay: linear ramp from 1 to SUSTAIN_LEVEL over DECAY_TIME
+ * 3. Sustain: constant level at SUSTAIN_LEVEL until note off
+ * 4. Release: linear ramp from SUSTAIN_LEVEL to 0 over RELEASE_TIME
+ * 
+ * ADSR ENVELOPE STRUCTURE:
+ * 
+ *     Amplitude
+ *         ^
+ *         |    /\
+ *         |   /  \______
+ *         |  /          \
+ *         | /            \
+ *         |/              \___
+ *         +--+---+-------+---+---> Time
+ *         0  |   |       |   |
+ *            |   |       |   envelope complete
+ *            |   |       note off (release starts)
+ *            |   decay complete (sustain starts)
+ *            attack complete (decay starts)
+ * 
+ * Note on triggers attack phase, note off triggers release phase.
+ * With SUSTAIN_LEVEL = 1.0, there's effectively no decay phase.
+ */
 process :: proc "c" (nframes: jack.NFrames, data: rawptr) -> i32 {
     out := (cast([^]f32)jack.port_get_buffer(audio_output_port, nframes))[0:nframes]
     volume :: 0.2
@@ -49,11 +101,17 @@ process :: proc "c" (nframes: jack.NFrames, data: rawptr) -> i32 {
                 // note on event
                 note = event_data[1]
                 note_on = 1.0
+                // Start ADSR envelope with attack phase
+                envelope_phase = .ATTACK
+                envelope_frames = 0
                 // TODO: handle velocity from event_data[2]
             } else if (event_data[0] == 0x80) {
                 // note off event
                 note = event_data[1]
                 note_on = 0.0
+                // Transition to release phase
+                envelope_phase = .RELEASE
+                envelope_frames = 0
             }
             fmt.printf("    note %d %s\n", note, ("on" if (note_on > 0) else "off"))
             event_index += 1
@@ -62,10 +120,59 @@ process :: proc "c" (nframes: jack.NFrames, data: rawptr) -> i32 {
                 in_event, loaded = jack.midi_event_get(port_buf, event_index)
             }
         }
+
+        // Calculate ADSR envelope
+        envelope_multiplier: f32 = 0.0
+
+        switch envelope_phase {
+        case .OFF:
+            envelope_multiplier = 0.0
+
+        case .ATTACK:
+            if envelope_frames < attack_frames {
+                // Attack phase: linear ramp from 0 to 1
+                envelope_multiplier = f32(envelope_frames) / f32(attack_frames)
+                envelope_frames += 1
+            } else {
+                // Attack complete, move to decay
+                envelope_phase = .DECAY
+                envelope_frames = 0
+            }
+
+        case .DECAY:
+            if envelope_frames < decay_frames {
+                // Decay phase: linear ramp from 1 to SUSTAIN_LEVEL
+                decay_progress := f32(envelope_frames) / f32(decay_frames)
+                envelope_multiplier = 1.0 - decay_progress * (1.0 - SUSTAIN_LEVEL)
+                envelope_frames += 1
+            } else {
+                // Decay complete, move to sustain
+                envelope_phase = .SUSTAIN
+                envelope_frames = 0
+            }
+
+        case .SUSTAIN:
+            // Sustain phase: constant level until note off
+            envelope_multiplier = SUSTAIN_LEVEL
+            envelope_frames += 1
+
+        case .RELEASE:
+            if envelope_frames < release_frames {
+                // Release phase: linear ramp from SUSTAIN_LEVEL to 0
+                release_progress := f32(envelope_frames) / f32(release_frames)
+                envelope_multiplier = SUSTAIN_LEVEL * (1.0 - release_progress)
+                envelope_frames += 1
+            } else {
+                // Release complete, envelope finished
+                envelope_phase = .OFF
+                envelope_frames = 0
+            }
+        }
+
         ramp += note_freqs[note]
         ramp = ramp - 2.0 if (ramp > 1.0) else ramp
 
-        out[i] = note_on * math.sin(2 * math.PI * ramp)
+        out[i] = envelope_multiplier * math.sin(2 * math.PI * ramp) * volume
     }
 
     return 0
@@ -79,7 +186,14 @@ calc_note_freqs :: proc "c" (sample_rate: u32) {
 }
 
 sample_rate_callback :: proc "c" (nframes: jack.NFrames, data: rawptr) -> i32 {
+    sample_rate = nframes
     calc_note_freqs(nframes)
+
+    // Calculate ADSR envelope frame durations based on sample rate
+    attack_frames = u32(f32(sample_rate) * ATTACK_TIME)
+    decay_frames = u32(f32(sample_rate) * DECAY_TIME)
+    release_frames = u32(f32(sample_rate) * RELEASE_TIME)
+
     return 0
 }
 
@@ -95,7 +209,13 @@ main :: proc() {
         os.exit(0)
     }
 
-    calc_note_freqs(jack.get_sample_rate(client))
+    sample_rate = jack.get_sample_rate(client)
+    calc_note_freqs(sample_rate)
+
+    // Initialize ADSR envelope frame durations
+    attack_frames = u32(f32(sample_rate) * ATTACK_TIME)
+    decay_frames = u32(f32(sample_rate) * DECAY_TIME)
+    release_frames = u32(f32(sample_rate) * RELEASE_TIME)
 
     jack.set_process_callback(client, process, nil)
 
