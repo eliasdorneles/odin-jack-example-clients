@@ -48,6 +48,54 @@ signal_handler :: proc "c" (sig: i32) {
     os.exit(0)
 }
 
+/*
+ * Metronome Process Callback
+ *
+ * This callback is called by JACK in real-time to generate audio samples for each beat.
+ * The metronome operates in cycles, where each cycle consists of:
+ * 1. A tone period (attack + sustain + decay)
+ * 2. A silence period until the next beat
+ *
+ * ENVELOPE STRUCTURE:
+ *
+ * The tone envelope follows this pattern over the tone duration:
+ *
+ *     Amplitude
+ *         ^
+ *         |    _______
+ *         |   /       \
+ *         |  /         \
+ *         | /           \
+ *         |/             \___
+ *         +--+-----+-----+---+---> Time
+ *         0  |     |     |   |
+ *            |     |     |   tone_length
+ *            |     |     |
+ *            |     |     +-- Decay phase starts (1.0 - decay)
+ *            |     +-------- Sustain phase
+ *            +-------------- Attack phase ends (attack)
+ *
+ * TIMING BREAKDOWN:
+ *
+ * Beat Period:  |<-------- frames_per_beat -------->|
+ * Tone:         |<-- tone_length -->|
+ * Silence:                          |<-- silence -->|
+ *
+ * Attack:       |<-attack->|
+ * Sustain:                 |<-sustain->|
+ * Decay:                             |<-decay->|
+ *
+ * Where:
+ * - attack = tone_length * data.attack
+ * - decay = tone_length * data.decay
+ * - sustain = tone_length - attack - decay
+ *
+ * The envelope multiplier is calculated as:
+ * - Attack phase: linear ramp from 0 to 1
+ * - Sustain phase: constant at 1.0
+ * - Decay phase: linear ramp from 1 to 0
+ * - Silence phase: 0 (no tone generated)
+ */
 process :: proc "c" (nframes: jack.NFrames, arg: rawptr) -> i32 {
     data := cast(^MetroData)arg
 
