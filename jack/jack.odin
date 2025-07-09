@@ -112,6 +112,8 @@ foreign lib {
 
     // from midiport.h
     midi_get_event_count :: proc(port_buffer: rawptr) -> u32 ---
+    midi_clear_buffer :: proc(port_buffer: rawptr) ---
+    midi_event_reserve :: proc(port_buffer: rawptr, time: NFrames, data_size: u32) -> [^]MidiData ---
 
     // from ringbuffer.h
     ringbuffer_create :: proc(sz: u32) -> ^RingBuffer ---
