@@ -95,7 +95,7 @@ main :: proc() {
         os.exit(0)
     }
 
-    calc_note_freqs(jack.get_sample_rate())
+    calc_note_freqs(jack.get_sample_rate(client))
 
     jack.set_process_callback(client, process, nil)
 
