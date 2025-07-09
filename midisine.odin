@@ -42,6 +42,8 @@ EnvelopePhase :: enum {
 // Envelope state
 envelope_phase: EnvelopePhase = .OFF
 envelope_frames: u32 = 0 // frames since current phase started
+current_envelope_level: f32 = 0.0 // current envelope amplitude level for smooth retriggering
+attack_start_level: f32 = 0.0 // level from which attack phase starts
 attack_frames: u32 = 0 // precomputed attack duration in frames
 decay_frames: u32 = 0 // precomputed decay duration in frames
 release_frames: u32 = 0 // precomputed release duration in frames
@@ -101,7 +103,8 @@ process :: proc "c" (nframes: jack.NFrames, data: rawptr) -> i32 {
                 // note on event
                 note = event_data[1]
                 note_on = 1.0
-                // Start ADSR envelope with attack phase
+                // Start ADSR envelope with attack phase, starting from current level for smooth legato
+                attack_start_level = current_envelope_level
                 envelope_phase = .ATTACK
                 envelope_frames = 0
                 // TODO: handle velocity from event_data[2]
@@ -129,26 +132,32 @@ process :: proc "c" (nframes: jack.NFrames, data: rawptr) -> i32 {
             envelope_multiplier = 0.0
 
         case .ATTACK:
-            if envelope_frames < attack_frames {
-                // Attack phase: linear ramp from 0 to 1
-                envelope_multiplier = f32(envelope_frames) / f32(attack_frames)
+            if envelope_frames <= attack_frames {
+                // Attack phase: linear ramp from attack_start_level to 1
+                attack_progress := f32(envelope_frames) / f32(attack_frames)
+                envelope_multiplier =
+                    attack_start_level + attack_progress * (1.0 - attack_start_level)
                 envelope_frames += 1
-            } else {
-                // Attack complete, move to decay
-                envelope_phase = .DECAY
-                envelope_frames = 0
+
+                // Check if we've completed the attack phase
+                if envelope_frames > attack_frames {
+                    envelope_phase = .DECAY
+                    envelope_frames = 0
+                }
             }
 
         case .DECAY:
-            if envelope_frames < decay_frames {
+            if envelope_frames <= decay_frames {
                 // Decay phase: linear ramp from 1 to SUSTAIN_LEVEL
                 decay_progress := f32(envelope_frames) / f32(decay_frames)
                 envelope_multiplier = 1.0 - decay_progress * (1.0 - SUSTAIN_LEVEL)
                 envelope_frames += 1
-            } else {
-                // Decay complete, move to sustain
-                envelope_phase = .SUSTAIN
-                envelope_frames = 0
+
+                // Check if we've completed the decay phase
+                if envelope_frames > decay_frames {
+                    envelope_phase = .SUSTAIN
+                    envelope_frames = 0
+                }
             }
 
         case .SUSTAIN:
@@ -157,17 +166,22 @@ process :: proc "c" (nframes: jack.NFrames, data: rawptr) -> i32 {
             envelope_frames += 1
 
         case .RELEASE:
-            if envelope_frames < release_frames {
+            if envelope_frames <= release_frames {
                 // Release phase: linear ramp from SUSTAIN_LEVEL to 0
                 release_progress := f32(envelope_frames) / f32(release_frames)
                 envelope_multiplier = SUSTAIN_LEVEL * (1.0 - release_progress)
                 envelope_frames += 1
-            } else {
-                // Release complete, envelope finished
-                envelope_phase = .OFF
-                envelope_frames = 0
+
+                // Check if we've completed the release phase
+                if envelope_frames > release_frames {
+                    envelope_phase = .OFF
+                    envelope_frames = 0
+                }
             }
         }
+
+        // Update current envelope level for smooth retriggering
+        current_envelope_level = envelope_multiplier
 
         ramp += note_freqs[note]
         ramp = ramp - 2.0 if (ramp > 1.0) else ramp
